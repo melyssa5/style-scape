@@ -99,6 +99,46 @@ class YourModel(tf.keras.Model):
         cce = tf.keras.losses.SparseCategoricalCrossentropy()
         return cce(labels, predictions)
 
+class ResNet50(tf.keras.Model):
+       def __init__(self, pretrained=True):
+        super(ResNet50, self).__init__()
+
+        # Load the ResNet50 base model
+        self.base_model = tf.keras.applications.ResNet50(
+            include_top=False,
+            weights='imagenet' if pretrained else None,  # ← Toggle pretrained vs. scratch
+            input_shape=(224, 224, 3),
+            pooling='avg'
+        )
+
+        # Freeze the base model if pretrained
+        self.base_model.trainable = not pretrained  # If pretrained, freeze; else train all
+
+        # Classification head for 15-scene classification
+        self.head = tf.keras.Sequential([
+            Dense(256, activation='relu', name='dense1'),
+            Dropout(0.3, name='dropout1'),
+            Dense(128, activation='relu', name='dense2'),
+            Dropout(0.3, name='dropout2'),
+            Dense(units=hp.num_classes, activation='softmax', name='output_layer')
+        ])
+
+        # Optimizer
+        self.optimizer = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.9)
+
+       def call(self, x):
+              x = tf.keras.applications.resnet.preprocess_input(x * 255.0)  # Match ResNet preprocessing
+              x = self.base_model(x)
+              x = self.head(x)
+              return x
+
+       @staticmethod
+       def loss_fn(labels, predictions):
+              cce = tf.keras.losses.SparseCategoricalCrossentropy()
+              return cce(labels, predictions)
+
+        
+
 
 class VGGModel(tf.keras.Model):
     def __init__(self):
