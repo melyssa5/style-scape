@@ -41,7 +41,7 @@ def parse_args():
         training from scratch (1), examining your model with LIME (2), or fine tuning VGG-16 (3).''')
     parser.add_argument(
         '--data',
-        default='..'+os.sep+'data'+os.sep,
+        default='data'+os.sep,
         help='Location where the dataset is stored.')
     parser.add_argument(
         '--load-vgg',
@@ -261,6 +261,12 @@ def main():
         # TODO: change the image path to be the image of your choice by changing
         # the lime-image flag when calling main.py to investigate
         # i.e. python main.py --evaluate --lime-image test/Bedroom/image_003.jpg
+        if datasets.stylized_data is not None:
+            print("\nEvaluating on stylized test set (stylized/)...")
+            test(model, datasets.stylized_data)
+        else:
+            print("\nStylized test set not found (skipping stylized/)...")
+         
         path = ARGS.lime_image
         LIME_explainer(model, path, datasets.preprocess_fn, timestamp)
     else:
