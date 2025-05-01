@@ -42,7 +42,7 @@ class Datasets():
         self.test_data = self.get_data(
             os.path.join(self.data_path, "test/"), task == '3', False, False)
         self.stylized_data = self.get_data(
-            os.path.join(self.data_path, "stylized/"), task == '3', False, False) \
+            os.path.join(self.data_path, "stylized/"), task == '4', False, False) \
             if os.path.exists(os.path.join(self.data_path, "stylized/")) else None
         
         

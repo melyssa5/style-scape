@@ -177,6 +177,7 @@ def test(model, test_data):
     """ Testing routine. """
 
     # Run model on test set
+    print("running model on test")
     model.evaluate(
         x=test_data,
         verbose=1,
@@ -266,6 +267,7 @@ def main():
         metrics=["sparse_categorical_accuracy"])
 
     if ARGS.evaluate:
+        
         test(model, datasets.test_data)
 
         # TODO: change the image path to be the image of your choice by changing
