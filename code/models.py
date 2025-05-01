@@ -1,103 +1,8 @@
-"""
-Homework 5 - CNNs
-CSCI1430 - Computer Vision
-Brown University
-"""
-
 import tensorflow as tf
 from keras.layers import \
        Conv2D, MaxPool2D, Dropout, Flatten, Dense
-
 import hyperparameters as hp
 
-
-class YourModel(tf.keras.Model):
-    """ Your own neural network model. """
-
-    def __init__(self):
-        super(YourModel, self).__init__()
-
-        # TASK 1
-        # TODO: Select an optimizer for your network (see the documentation
-        #       for tf.keras.optimizers)
-        self.optimizer = tf.keras.optimizers.SGD(learning_rate=hp.learning_rate, momentum=hp.momentum)
-    
-        # TASK 1
-        # TODO: Build your own convolutional neural network, using Dropout at
-        #       least once. The input image will be passed through each Keras
-        #       layer in self.architecture sequentially. Refer to the imports
-        #       to see what Keras layers you can use to build your network.
-        #       Feel free to import other layers, but the layers already
-        #       imported are enough for this assignment.
-        #
-        #       Remember: Your network must have under 15 million parameters!
-        #       You will see a model summary when you run the program that
-        #       displays the total number of parameters of your network.
-        #
-        #       Remember: Because this is a 15-scene classification task,
-        #       the output dimension of the network must be 15. That is,
-        #       passing a tensor of shape [batch_size, img_size, img_size, 1]
-        #       into the network will produce an output of shape
-        #       [batch_size, 15].
-        #
-        #       Note: Keras layers such as Conv2D and Dense give you the
-        #             option of defining an activation function for the layer.
-        #             For example, if you wanted ReLU activation on a Conv2D
-        #             layer, you'd simply pass the string 'relu' to the
-        #             activation parameter when instantiating the layer.
-        #             While the choice of what activation functions you use
-        #             is up to you, the final layer must use the softmax
-        #             activation function so that the output of your network
-        #             is a probability distribution.
-        #
-        #       Note: Flatten is a very useful layer. You shouldn't have to
-        #             explicitly reshape any tensors anywhere in your network.
-
-        self.architecture = [
-              ## Add layers here separated by commas.
-              # Convolutional layer with activation function
-              # Max pooling layer 
-              # Dense layer with an activation function
-              Conv2D(filters=32, kernel_size=(5,5), activation='relu', padding='same', name="conv1"),
-              MaxPool2D(pool_size=(2, 2), strides=(2, 2), name="pool1"),
-              Conv2D(64, kernel_size=(3, 3), activation='relu', padding='same', name="conv2"),
-              MaxPool2D(pool_size=(2, 2), name="pool2"),
-              Conv2D(128, kernel_size=(3, 3), activation='relu', padding='same', name='conv3'),
-              MaxPool2D(pool_size=(2, 2), name='pool3'),
-              Flatten(name='flatten'),
-              Dense(units=128, activation='relu', name='dense1'),
-              Dropout(0.3, name="dropout1"),
-              Dense(64, activation='relu', name='dense2'),
-              Dense(units=hp.num_classes, activation='softmax', name='output_layer'),
-        ]
-
-        #       Don't change the line below. This line creates an instance
-        #       of a Sequential model using the layers you defined above. 
-        #       A sequential model, when called, calls its own layers in 
-        #       order to produce its output! 
-        self.your_model = tf.keras.Sequential(self.architecture, name="your_model")
-
-    def call(self, x):
-        """ Passes input image through the network. """
-
-        x = self.your_model(x)
-
-        #       Note: If we hadn't defined the Sequential instance, the below 
-        #       lines would achieve the same output!
-        # for layer in self.architecture:
-        #     x = layer(x)
-        return x
-
-    @staticmethod
-    def loss_fn(labels, predictions):
-        """ Loss function for the model. """
-
-        # TASK 1
-        # TODO: Select a loss function for your network 
-        #       (see the documentation for tf.keras.losses)
-
-        cce = tf.keras.losses.SparseCategoricalCrossentropy()
-        return cce(labels, predictions)
 
 class ResNet50(tf.keras.Model):
        def __init__(self, pretrained=True):
@@ -138,7 +43,6 @@ class ResNet50(tf.keras.Model):
               return cce(labels, predictions)
 
         
-
 
 class VGGModel(tf.keras.Model):
     def __init__(self):
