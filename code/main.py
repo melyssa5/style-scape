@@ -41,7 +41,7 @@ def parse_args():
     )
     parser.add_argument(
         '--data',
-        default='data'+os.sep,
+        
         help='Location where the dataset is stored.')
     parser.add_argument(
         '--load-vgg',
