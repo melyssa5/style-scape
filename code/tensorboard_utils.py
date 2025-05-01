@@ -237,6 +237,13 @@ class CustomModelSaver(tf.keras.callbacks.Callback):
                        .format(epoch + 1, cur_acc, location = save_location))
                 # Only save weights of classification head of VGGModel
                 self.model.head.save_weights(save_location)
+            elif self.task == '4':
+                save_location = self.checkpoint_dir + os.sep + "resnet50." + save_name
+                print(("\nEpoch {0:03d} TEST accuracy ({1:.4f}) EXCEEDED previous "
+                    "maximum TEST accuracy.\nSaving checkpoint at {location}")
+                    .format(epoch + 1, cur_acc, location = save_location))
+                self.model.save_weights(save_location)
+
 
             # Ensure max_num_weights is not exceeded by removing
             # minimum weight
