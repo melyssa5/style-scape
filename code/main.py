@@ -41,7 +41,7 @@ def parse_args():
     )
     parser.add_argument(
         '--data',
-        
+        default='data'+os.sep,
         help='Location where the dataset is stored.')
     parser.add_argument(
         '--load-vgg',
@@ -241,8 +241,9 @@ def main():
     use_pretrained = ARGS.pretrained == 'True'
     if ARGS.task == '4':
         model = ResNet50(pretrained=use_pretrained)
-        checkpoint_path = "checkpoints" + os.sep + \
-            "resnet50_model" + os.sep + timestamp + os.sep
+        checkpoint_path = "checkpoints" + os.sep + "resnet_model" + os.sep + timestamp + os.sep
+        logs_path = "logs" + os.sep + "resnet_model" + os.sep + timestamp + os.sep
+
         model(tf.keras.Input(shape=(224, 224, 3)))  # Build the model
         model.base_model.summary()
         model.head.summary()
