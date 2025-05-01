@@ -1,9 +1,3 @@
-"""
-Homework 5 - CNNs
-CSCI1430 - Computer Vision
-Brown University
-"""
-
 import os
 import sys
 import argparse
@@ -12,7 +6,7 @@ from datetime import datetime
 import tensorflow as tf
 
 import hyperparameters as hp
-from models import YourModel, VGGModel
+from models import YourModel, VGGModel, ResNet50
 from preprocess import Datasets
 from skimage.transform import resize
 from tensorboard_utils import \
@@ -36,9 +30,15 @@ def parse_args():
     parser.add_argument(
         '--task',
         required=True,
-        choices=['1', '2', '3'],
+        choices=['1', '2', '3', '4'],
         help='''Which task of the assignment to run -
         training from scratch (1), examining your model with LIME (2), or fine tuning VGG-16 (3).''')
+    parser.add_argument(
+        '--pretrained',
+        default='True',
+        choices=['True', 'False'],
+        help='Use ImageNet-pretrained weights (True) or train ResNet50 from scratch (False).'
+    )
     parser.add_argument(
         '--data',
         default='data'+os.sep,
@@ -223,7 +223,7 @@ def main():
 
         # Print summary of model
         model.summary()
-    elif ARGS.task == '3':
+    if ARGS.task == '3':
         model = VGGModel()
         checkpoint_path = "checkpoints" + os.sep + \
             "vgg_model" + os.sep + timestamp + os.sep
@@ -237,6 +237,15 @@ def main():
 
         # Load base of VGG model
         model.vgg16.load_weights(ARGS.load_vgg)
+
+    use_pretrained = ARGS.pretrained == 'True'
+    if ARGS.task == '4':
+        model = ResNet50(pretrained=use_pretrained)
+        checkpoint_path = "checkpoints" + os.sep + \
+            "resnet50_model" + os.sep + timestamp + os.sep
+        model(tf.keras.Input(shape=(224, 224, 3)))  # Build the model
+        model.base_model.summary()
+        model.head.summary()
 
     # Load checkpoints
     if ARGS.load_checkpoint is not None:
