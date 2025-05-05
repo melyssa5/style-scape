@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument(
         '--task',
         required=True,
-        choices=['1', '2', '3', '4'],
+        choices=['1', '2', '3', '4', '5'],
         help='''Which task of the assignment to run -
         training from scratch (1), examining your model with LIME (2), or fine tuning VGG-16 (3).''')
     parser.add_argument(
