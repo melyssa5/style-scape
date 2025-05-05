@@ -13,7 +13,7 @@ LR_DECAY = 0.0005
 
 class AlexNet(nn.Module):
     def __init__(self, pretrained=True, device=None):
-        super().__init__()
+        super(AlexNet, self).__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load AlexNet
