@@ -10,8 +10,8 @@ import os
 
 # ====================== CONFIG ======================
 class Config:
-    data_dir = "data"                   # Path to your data folder
-    model_name = "facebook/dinov2-base" # DINOv2 variant
+    data_dir = "../data"                   # Path to your data folder
+    model_name = "facebook/dinov2-small" # DINOv2 variant
     num_classes = 15                    # Update based on your dataset
     batch_size = 32
     epochs = 10
