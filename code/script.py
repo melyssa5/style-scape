@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from transformers import AutoImageProcessor, Dinov2Model
 from data import get_dataloaders
 from train import evaluate, train_epoch
 import os
