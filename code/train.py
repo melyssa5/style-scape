@@ -3,6 +3,19 @@ import torch
 from sklearn.metrics import classification_report, confusion_matrix
 import pandas as pd
 
+def train_epoch(model, loader, optimizer, loss_fn, device):
+    model.train()
+    total_loss = 0
+    for x, y in tqdm(loader, desc="Training"):
+        x, y = x.to(device), y.to(device)
+        optimizer.zero_grad()
+        loss = loss_fn(model(x), y)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    return total_loss / len(loader)
+
+
 def evaluate(model, test_loader, device, print_results=True):
     """Returns and prints full evaluation metrics"""
     model.eval()
