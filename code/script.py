@@ -1,13 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
-from transformers import Dinov2Model, AutoImageProcessor
-from sklearn.metrics import classification_report
-from tqdm.auto import tqdm
-import pandas as pd
-from models.dinoV2 import DinoV2
+from .models.dinoV2 import DinoV2
 from data import get_dataloaders
 from train import evaluate, train_epoch
 
