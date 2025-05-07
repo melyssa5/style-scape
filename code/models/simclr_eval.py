@@ -40,7 +40,7 @@ test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers
 # Classifier head
 classifier = nn.Sequential(
     encoder,
-    nn.Linear(512, 15)  # 15 scene categories
+    nn.Linear(128, 15)  # 15 scene categories
 ).to("cuda" if torch.cuda.is_available() else "cpu")
 
 # Loss and optimizer
