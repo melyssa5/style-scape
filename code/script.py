@@ -65,6 +65,7 @@ def get_dataloaders(config):
 
     train_set = ImageFolder(f"{config.data_dir}/train", transform=transform)
     test_set = ImageFolder(f"{config.data_dir}/stylized", transform=transform)
+    natural_test_set = ImageFolder(f"{config.data_dir}/test", transform=transform)
 
     def collate_fn(batch):
         images, labels = zip(*batch)
@@ -77,7 +78,8 @@ def get_dataloaders(config):
 
     return (
         DataLoader(train_set, batch_size=config.batch_size, shuffle=True, collate_fn=collate_fn),
-        DataLoader(test_set, batch_size=config.batch_size, collate_fn=collate_fn)
+        DataLoader(test_set, batch_size=config.batch_size, collate_fn=collate_fn),
+        DataLoader(natural_test_set, batch_size=config.batch_size, collate_fn=collate_fn)
     )
 
 # ====================== TRAINING ======================
@@ -290,14 +292,16 @@ def run_gradcam_on_samples(model, dataloader, processor, device, output_dir="gra
 
 
 if __name__ == "__main__":
-    train()
+    # train()
     config = Config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = DinoV2(config).to(device)
-    model.load_state_dict(torch.load("dinov2_trained_model.pth"))
-    _, stylized_loader = get_dataloaders(config)
+    model.load_state_dict(torch.load("dinov2_last_model.pth"))
+    _, stylized_loader, natural_test_loader = get_dataloaders(config)
     processor = AutoImageProcessor.from_pretrained(config.model_name)
     print("\nEvaluating on Stylized Dataset:")
     evaluate_model(model, stylized_loader, device)
+    print("\nEvaluating on Natural Test Dataset:")
+    evaluate_model(model, natural_test_loader, device)
     run_lime_on_samples(model, stylized_loader, processor, device)
     run_gradcam_on_samples(model, stylized_loader, processor, device)
