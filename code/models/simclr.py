@@ -91,7 +91,7 @@ def train_simclr():
     train_loader = get_dataloaders()
     model = SimCLR()
     trainer = pl.Trainer(
-        max_epochs=20,
+        max_epochs=50,
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
         callbacks=[ModelCheckpoint(monitor='train_loss'), LearningRateMonitor(logging_interval='epoch')]
     )
