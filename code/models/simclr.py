@@ -33,7 +33,7 @@ class StylizedPairDataset(Dataset):
         return len(self.natural_data)
 
 
-def get_dataloaders(natural_path='style-scape/data/train', stylized_path='style-scape/data/stylized', batch_size=64):
+def get_dataloaders(natural_path='/Users/marleniangel/CSCI1430_Projects/style-scape/data/train', stylized_path='/Users/marleniangel/CSCI1430_Projects/style-scape/data/stylized', batch_size=64):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
