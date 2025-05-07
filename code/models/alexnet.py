@@ -17,7 +17,7 @@ from skimage.segmentation import mark_boundaries
 # MODEL PARAMETERS
 NUM_EPOCHS = 90
 MOMENTUM = 0.9
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.0001
 LR_DECAY = 0.0005
 
 class AlexNet(nn.Module):
