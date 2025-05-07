@@ -66,12 +66,14 @@ for epoch in range(epochs):
 
         total_loss += loss.item()
         total_correct += (outputs.argmax(1) == labels).sum().item()
-        writer.add_scalar("Train/Loss", total_loss, epoch)
-        writer.add_scalar("Train/Accuracy", acc, epoch)
-
 
     acc = total_correct / len(train_dataset)
-    print(f"Epoch {epoch+1}: Train Loss = {total_loss:.4f}, Train Accuracy = {acc:.4f}")
+    avg_loss = total_loss / len(train_loader)
+    
+    print(f"Epoch {epoch+1}: Train Loss = {avg_loss:.4f}, Train Accuracy = {acc:.4f}")
+    writer.add_scalar("Train/Loss", avg_loss, epoch)
+    writer.add_scalar("Train/Accuracy", acc, epoch)
+
 
 # Final test accuracy
 classifier.eval()
