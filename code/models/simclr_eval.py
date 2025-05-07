@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torchvision.models import resnet18
+from torch.utils.tensorboard import SummaryWriter
 
 from pytorch_lightning import seed_everything
 from pathlib import Path
@@ -50,6 +51,7 @@ optimizer = optim.Adam(classifier[1].parameters(), lr=1e-3)
 # Training loop
 epochs = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
+writer = SummaryWriter(log_dir="logs/simclr_linear_eval")
 for epoch in range(epochs):
     classifier.train()
     total_loss, total_correct = 0, 0
@@ -64,6 +66,9 @@ for epoch in range(epochs):
 
         total_loss += loss.item()
         total_correct += (outputs.argmax(1) == labels).sum().item()
+        writer.add_scalar("Train/Loss", total_loss, epoch)
+        writer.add_scalar("Train/Accuracy", acc, epoch)
+
 
     acc = total_correct / len(train_dataset)
     print(f"Epoch {epoch+1}: Train Loss = {total_loss:.4f}, Train Accuracy = {acc:.4f}")
@@ -79,3 +84,6 @@ with torch.no_grad():
 
 test_acc = correct / len(test_dataset)
 print(f"\n Final Test Accuracy: {test_acc:.4f}")
+writer.add_scalar("Test/Accuracy", test_acc, epochs)
+writer.close()
+
