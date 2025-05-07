@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 from torchvision.models import resnet18
 
 from pytorch_lightning import seed_everything
-from code.models.simclr import SimCLR  
+from simclr import SimCLR
+
 
 # Load trained encoder
 CHECKPOINT_PATH = 'lightning_logs/version_0/checkpoints'
