@@ -33,16 +33,16 @@ class DinoV2(nn.Module):
                 param.requires_grad = False
 
         # Hook into the last transformer block
-        target_block = self.backbone.encoder.layer[-1]
+        target_block = self.backbone.encoder.layer[-1]  # last transformer block
 
         def save_activation(module, input, output):
-            self.activations = output[0].detach()
+            self.activations = output[0].detach()  # output is a tuple
 
         def save_gradient(grad):
             self.gradients = grad
 
-        target_block.output.register_forward_hook(save_activation)
-        target_block.output.register_full_backward_hook(lambda m, g_in, g_out: save_gradient(g_out[0]))
+        target_block.register_forward_hook(save_activation)
+        target_block.register_full_backward_hook(lambda m, g_in, g_out: save_gradient(g_out[0]))
 
     def forward(self, x):
         outputs = self.backbone(pixel_values=x)
