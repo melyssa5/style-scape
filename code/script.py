@@ -197,11 +197,11 @@ def run_lime_on_samples(model, dataloader, processor, device, output_dir="lime_o
     # Run LIME on each image
     for tag, (img_np, label, pred) in all_selected:
         explanation = explainer.explain_instance(
-            img_np,
-            lime_predict,
-            top_labels=1,
-            hide_color=0,
-            num_samples=1000
+        img_np,
+        lime_predict,
+        labels=[pred],  # explicitly request explanation for pred
+        hide_color=0,
+        num_samples=1000
         )
 
         temp, mask = explanation.get_image_and_mask(
@@ -210,6 +210,7 @@ def run_lime_on_samples(model, dataloader, processor, device, output_dir="lime_o
             num_features=5,
             hide_rest=False
         )
+
 
         # Save visualization
         fig, ax = plt.subplots()
