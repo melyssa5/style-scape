@@ -89,6 +89,7 @@ def train():
     params = model.classifier.parameters() if config.freeze_backbone else model.parameters()
     optimizer = torch.optim.Adam(params, lr=config.lr)
     loss_fn = nn.CrossEntropyLoss()
+    best_acc = 0.0
 
     for epoch in range(config.epochs):
         model.train()
@@ -109,10 +110,16 @@ def train():
                 correct += (model(x).argmax(1) == y).sum().item()
                 total += y.size(0)
 
-        print(f"Train Loss: {epoch_loss/len(train_loader):.4f} | Test Acc: {100*correct/total:.1f}%")
+        acc = 100 * correct / total
+        print(f"Train Loss: {epoch_loss/len(train_loader):.4f} | Test Acc: {acc:.1f}%")
 
-    torch.save(model.state_dict(), "dinov2_trained_model.pth")
-    print("Model saved!")
+        if acc > best_acc:
+            best_acc = acc
+            torch.save(model.state_dict(), "dinov2_best_model.pth")
+            print(f"✅ Saved new best model (acc={acc:.2f}%)")
+
+    torch.save(model.state_dict(), "dinov2_last_model.pth")
+    print("📝 Training complete. Final model saved as 'dinov2_last_model.pth'")
 
 # ======== testing =========
 def evaluate_model(model, dataloader, device):
