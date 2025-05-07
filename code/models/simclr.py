@@ -1,107 +1,48 @@
 import os
+import random
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils.data as data
-import torchvision.transforms as T
-import torchvision.models as models
-from PIL import Image
-from glob import glob
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from torchvision import transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import Dataset
 
-# Custom Dataset
-class StylizedSimCLRDataset(data.Dataset):
-    def __init__(self, train_dir, stylized_dir, transform=None):
-        self.train_dir = train_dir
-        self.stylized_dir = stylized_dir
+class StylizedPairDataset(Dataset):
+    """
+    Custom dataset to return a pair: (natural_image, stylized_variant), with optional transform.
+    Assumes stylized dataset contains exactly 3x the number of images as the natural one.
+    """
+    def __init__(self, natural_root, stylized_root, transform=None):
+        self.natural_data = ImageFolder(natural_root)
+        self.stylized_data = ImageFolder(stylized_root)
         self.transform = transform
-        self.train_images = sorted(glob(os.path.join(train_dir, '*', '*.jpg')))
 
-    def __len__(self):
-        return len(self.train_images)
+        assert len(self.stylized_data) == len(self.natural_data) * 3, \
+            f"Expected 3 stylized variants per natural image. Got {len(self.stylized_data)} stylized and {len(self.natural_data)} natural."
 
     def __getitem__(self, idx):
-        orig_path = self.train_images[idx]
-        label = orig_path.split(os.sep)[-2]
-        filename = os.path.basename(orig_path).split('.')[0]  # no extension
-        style_glob = os.path.join(self.stylized_dir, label, filename + '-stylized-*.jpg')
-        style_paths = sorted(glob(style_glob))
+        # Get the natural image
+        img1, _ = self.natural_data[idx]
 
-        image = Image.open(orig_path).convert('RGB')
-        stylized_image = Image.open(style_paths[0]).convert('RGB')  # take first stylized variant
+        # Choose one of the 3 stylized variants
+        stylized_idx = idx * 3 + random.randint(0, 2)
+        img2, _ = self.stylized_data[stylized_idx]
 
         if self.transform:
-            image = self.transform(image)
-            stylized_image = self.transform(stylized_image)
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
 
-        return (image, stylized_image)
+        return (img1, img2), 0  # dummy label
 
-# SimCLR Model
-class SimCLR(pl.LightningModule):
-    def __init__(self, hidden_dim=128, lr=1e-3, temperature=0.5, weight_decay=1e-4, max_epochs=100):
-        super().__init__()
-        self.save_hyperparameters()
-        self.encoder = models.resnet18(weights=None)
-        self.encoder.fc = nn.Identity()
-        self.projector = nn.Sequential(
-            nn.Linear(512, 4 * hidden_dim),
-            nn.ReLU(),
-            nn.Linear(4 * hidden_dim, hidden_dim)
-        )
+    def __len__(self):
+        return len(self.natural_data)
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.hparams.max_epochs)
-        return [optimizer], [scheduler]
 
-    def info_nce_loss(self, z):
-        z = F.normalize(z, dim=1)
-        sim_matrix = torch.matmul(z, z.T) / self.hparams.temperature
-        batch_size = z.size(0) // 2
-        labels = torch.arange(batch_size).to(self.device)
-        labels = torch.cat([labels, labels], dim=0)
-        mask = torch.eye(len(z), dtype=torch.bool).to(self.device)
-        sim_matrix = sim_matrix.masked_fill(mask, -1e9)
-        loss = F.cross_entropy(sim_matrix, labels)
-        return loss
+def get_dataloaders(natural_path='data/train', stylized_path='data/stylized', batch_size=64):
+    """Returns the SimCLR-style training dataloader."""
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ])
 
-    def forward(self, x):
-        return self.projector(self.encoder(x))
-
-    def training_step(self, batch, batch_idx):
-        x1, x2 = batch
-        z1 = self(x1)
-        z2 = self(x2)
-        loss = self.info_nce_loss(torch.cat([z1, z2], dim=0))
-        self.log("train_loss", loss)
-        return loss
-
-# Set paths and transformations
-train_transform = T.Compose([
-    T.Resize((224, 224)),
-    T.ToTensor(),
-    T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-])
-
-train_dataset = StylizedSimCLRDataset(
-    train_dir='data/train',
-    stylized_dir='data/stylized',
-    transform=train_transform
-)
-
-train_loader = data.DataLoader(train_dataset, batch_size=64, shuffle=True, drop_last=True, num_workers=4)
-
-# Training
-model = SimCLR()
-trainer = pl.Trainer(
-    max_epochs=100,
-    devices=1,
-    accelerator="gpu" if torch.cuda.is_available() else "cpu",
-    callbacks=[
-        ModelCheckpoint(save_top_k=1, monitor="train_loss"),
-        LearningRateMonitor(logging_interval='epoch')
-    ]
-)
-
-trainer.fit(model, train_loader)
+    dataset = StylizedPairDataset(natural_path, stylized_path, transform)
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+    return train_loader
