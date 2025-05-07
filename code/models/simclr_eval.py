@@ -24,6 +24,7 @@ for param in encoder.parameters():
 # Dataset paths
 train_dir = "style-scape/data/train"
 test_dir = "style-scape/data/test"
+stylized_dir = "style-scape/data/stylized"
 
 # Transforms
 transform = transforms.Compose([
@@ -34,9 +35,11 @@ transform = transforms.Compose([
 # Datasets
 train_dataset = ImageFolder(train_dir, transform=transform)
 test_dataset = ImageFolder(test_dir, transform=transform)
+stylized_dataset = ImageFolder(stylized_dir, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=2)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=2)
+stylized_loader = DataLoader(stylized_dataset, batch_size=64, shuffle=False, num_workers=2)
 
 # Classifier head
 classifier = nn.Sequential(
@@ -52,6 +55,7 @@ optimizer = optim.Adam(classifier[1].parameters(), lr=1e-3)
 epochs = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
 writer = SummaryWriter(log_dir="logs/simclr_linear_eval")
+
 for epoch in range(epochs):
     classifier.train()
     total_loss, total_correct = 0, 0
@@ -74,8 +78,7 @@ for epoch in range(epochs):
     writer.add_scalar("Train/Loss", avg_loss, epoch)
     writer.add_scalar("Train/Accuracy", acc, epoch)
 
-
-# Final test accuracy
+# Final test accuracy on natural images
 classifier.eval()
 correct = 0
 with torch.no_grad():
@@ -83,9 +86,19 @@ with torch.no_grad():
         imgs, labels = imgs.to(device), labels.to(device)
         outputs = classifier(imgs)
         correct += (outputs.argmax(1) == labels).sum().item()
-
 test_acc = correct / len(test_dataset)
-print(f"\n Final Test Accuracy: {test_acc:.4f}")
-writer.add_scalar("Test/Accuracy", test_acc, epochs)
-writer.close()
+print(f"\nFinal Test Accuracy (Natural): {test_acc:.4f}")
+writer.add_scalar("Test/Natural_Accuracy", test_acc, epochs)
 
+# Final test accuracy on stylized images
+correct_stylized = 0
+with torch.no_grad():
+    for imgs, labels in stylized_loader:
+        imgs, labels = imgs.to(device), labels.to(device)
+        outputs = classifier(imgs)
+        correct_stylized += (outputs.argmax(1) == labels).sum().item()
+stylized_acc = correct_stylized / len(stylized_dataset)
+print(f"Final Test Accuracy (Stylized): {stylized_acc:.4f}")
+writer.add_scalar("Test/Stylized_Accuracy", stylized_acc, epochs)
+
+writer.close()
