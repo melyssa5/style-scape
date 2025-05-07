@@ -48,7 +48,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(classifier[1].parameters(), lr=1e-3)
 
 # Training loop
-epochs = 10
+epochs = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
 for epoch in range(epochs):
     classifier.train()
