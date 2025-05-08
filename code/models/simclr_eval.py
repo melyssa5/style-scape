@@ -107,23 +107,46 @@ stylized_acc = correct_stylized / len(stylized_dataset)
 print(f"\n Final Stylized Test Accuracy: {stylized_acc:.4f}")
 writer.add_scalar("Test/Accuracy_Stylized", stylized_acc, epochs)
 
-# Grad-CAM visualization on a few natural images
-cam_extractor = GradCAM(classifier[0], target_layer="layer4")
+# -------------------------------
+# ✅ Grad-CAM Visualization
+# -------------------------------
 
-sample_imgs, sample_labels = next(iter(test_loader))
+print("\nGenerating Grad-CAM visualizations...")
+
+# Enable gradients temporarily for Grad-CAM
+for param in encoder.parameters():
+    param.requires_grad = True
+classifier.train()  # Required for Grad-CAM to capture gradients
+
+# Initialize Grad-CAM
+cam_extractor = GradCAM(classifier, target_layer='0.layer4')  # 0 is the encoder in classifier[0]
+
+# Pick a few samples from stylized loader
+import torchvision.utils as vutils
+import os
+
+sample_imgs, _ = next(iter(stylized_loader))
 sample_imgs = sample_imgs.to(device)
-sample_outputs = classifier(sample_imgs)
-sample_preds = sample_outputs.argmax(dim=1)
+os.makedirs("gradcam_outputs", exist_ok=True)
 
-for i in range(3):
+# Forward pass to get predictions
+outputs = classifier(sample_imgs)
+preds = outputs.argmax(1)
+
+# Apply CAM on each sample
+for i in range(4):  # Visualize first 4 images
     img = sample_imgs[i]
-    pred = sample_preds[i].item()
-    cam_map = cam_extractor(pred, sample_outputs[i].unsqueeze(0))
-    heatmap = overlay_mask(to_pil_image(img.cpu()), to_pil_image(cam_map[0].cpu(), mode='F'), alpha=0.5)
-    plt.figure()
-    plt.title(f"Natural Image - Predicted Class: {pred}")
-    plt.imshow(heatmap)
-    plt.axis('off')
-    plt.show()
+    pred_class = preds[i].item()
+
+    # Get CAM mask
+    activation_map = cam_extractor(pred_class, outputs[i].unsqueeze(0))
+
+    # Overlay CAM on image
+    heatmap = overlay_mask(to_pil_image(img.cpu()), to_pil_image(activation_map[0].squeeze(0).cpu()), alpha=0.5)
+
+    # Save image
+    heatmap.save(f"gradcam_outputs/sample_{i}_class_{pred_class}.png")
+
+print("Saved Grad-CAM images to `gradcam_outputs/` folder.")
 
 writer.close()
