@@ -79,14 +79,14 @@ def main():
     natural_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
     stylized_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
 
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True,
+    train_loader = DataLoader(train_data, batch_size=batch_size,
                               collate_fn=lambda batch: collate_fn(batch, processor))
     natural_test_loader = DataLoader(natural_test_data, batch_size=batch_size,
                              collate_fn=lambda batch: collate_fn(batch, processor))
     stylized_test_loader = DataLoader(stylized_test_data, batch_size=batch_size,
                              collate_fn=lambda batch: collate_fn(batch, processor))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     loss_fn = nn.CrossEntropyLoss()
     best_loss = float('inf')
     for epoch in range(num_epochs):
@@ -100,10 +100,12 @@ def main():
 
     acc, report, cm = evaluate(model, natural_test_loader, device)
     print(f"\nNatural Test Accuracy: {acc:.2%}")
-    acc, report, cm = evaluate(model, stylized_test_loader, device)
-    print(f"\nStylized Test Accuracy: {acc:.2%}")
     print(report)
     print(cm)
+    st_acc, st_report, st_cm = evaluate(model, stylized_test_loader, device)
+    print(f"\nStylized Test Accuracy: {st_acc:.2%}")
+    print(st_report)
+    print(st_cm)
 
 if __name__ == "__main__":
     main()
