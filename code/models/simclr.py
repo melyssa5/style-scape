@@ -17,12 +17,13 @@ class StylizedPairDataset(Dataset):
         self.natural_data = ImageFolder(natural_root)
         self.stylized_data = ImageFolder(stylized_root)
         self.transform = transform
+        self.epoch = 0  # <-- NEW: added epoch tracking
         assert len(self.stylized_data) == len(self.natural_data) * 3, \
             f"Expected 3 stylized per natural. Got {len(self.stylized_data)} stylized and {len(self.natural_data)} natural."
 
     def __getitem__(self, idx):
         img1, _ = self.natural_data[idx]
-        stylized_idx = idx * 3 + random.randint(0, 2)
+        stylized_idx = idx * 3 + (self.epoch % 3)  # <-- NEW: deterministic variant selection
         img2, _ = self.stylized_data[stylized_idx]
         if self.transform:
             img1 = self.transform(img1)
@@ -82,6 +83,11 @@ class SimCLR(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def on_train_epoch_start(self):  # <-- NEW: update epoch for dataset
+        loader = self.trainer.train_dataloader
+        if hasattr(loader, 'dataset') and hasattr(loader.dataset, 'epoch'):
+            loader.dataset.epoch = self.current_epoch
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
         return optimizer
@@ -97,6 +103,7 @@ def train_simclr():
     )
     trainer.fit(model, train_loader)
     return model
+
 
 
 if __name__ == '__main__':
