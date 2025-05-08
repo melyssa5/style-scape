@@ -107,46 +107,40 @@ stylized_acc = correct_stylized / len(stylized_dataset)
 print(f"\n Final Stylized Test Accuracy: {stylized_acc:.4f}")
 writer.add_scalar("Test/Accuracy_Stylized", stylized_acc, epochs)
 
-# -------------------------------
-# ✅ Grad-CAM Visualization
-# -------------------------------
+writer.close()
+
+#####GRAD CAM #####
+import os
+from torchvision.utils import save_image
+os.makedirs("gradcam_outputs", exist_ok=True)
 
 print("\nGenerating Grad-CAM visualizations...")
 
-# Enable gradients temporarily for Grad-CAM
-for param in encoder.parameters():
+# Enable gradients
+for param in classifier.parameters():
     param.requires_grad = True
-classifier.train()  # Required for Grad-CAM to capture gradients
 
-# Initialize Grad-CAM
-cam_extractor = GradCAM(classifier, target_layer='0.layer4')  # 0 is the encoder in classifier[0]
+# Attach Grad-CAM to final layer of encoder
+cam_extractor = GradCAM(classifier[0], target_layer="layer4")
 
-# Pick a few samples from stylized loader
-import torchvision.utils as vutils
-import os
+sample_imgs, sample_labels = next(iter(stylized_loader))
+sample_imgs = sample_imgs[:4].to(device)
 
-sample_imgs, _ = next(iter(stylized_loader))
-sample_imgs = sample_imgs.to(device)
-os.makedirs("gradcam_outputs", exist_ok=True)
+# Forward pass
+sample_outputs = classifier(sample_imgs)
+pred_classes = sample_outputs.argmax(dim=1)
 
-# Forward pass to get predictions
-outputs = classifier(sample_imgs)
-preds = outputs.argmax(1)
+for i in range(4):
+    # Compute CAM for predicted class
+    activation_map = cam_extractor(pred_classes[i].item(), sample_outputs[i].unsqueeze(0))
 
-# Apply CAM on each sample
-for i in range(4):  # Visualize first 4 images
-    img = sample_imgs[i]
-    pred_class = preds[i].item()
+    # Convert original image to PIL
+    original_img = to_pil_image(sample_imgs[i].cpu())
 
-    # Get CAM mask
-    activation_map = cam_extractor(pred_class, outputs[i].unsqueeze(0))
-
-    # Overlay CAM on image
-    heatmap = overlay_mask(to_pil_image(img.cpu()), to_pil_image(activation_map[0].squeeze(0).cpu()), alpha=0.5)
+    # Overlay heatmap
+    result = overlay_mask(original_img, to_pil_image(activation_map[0].cpu(), mode='F'), alpha=0.5)
 
     # Save image
-    heatmap.save(f"gradcam_outputs/sample_{i}_class_{pred_class}.png")
+    result.save(f"gradcam_outputs/sample_{i}_class_{pred_classes[i].item()}.png")
 
-print("Saved Grad-CAM images to `gradcam_outputs/` folder.")
-
-writer.close()
+print("Saved Grad-CAM images to gradcam_outputs/")
