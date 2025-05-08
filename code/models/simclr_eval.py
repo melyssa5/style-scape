@@ -22,9 +22,9 @@ for param in encoder.parameters():
     param.requires_grad = False
 
 # Dataset paths
-train_dir = "style-scape/data/train"
-test_dir = "style-scape/data/test"
-stylized_dir = "style-scape/data/stylized"
+train_dir = "data/train"
+test_dir = "data/test"
+stylized_dir = "data/stylized"
 
 # Transforms
 transform = transforms.Compose([
