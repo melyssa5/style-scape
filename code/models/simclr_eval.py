@@ -6,11 +6,14 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torchvision.models import resnet18
 from torch.utils.tensorboard import SummaryWriter
+from torchcam.methods import GradCAM
+from torchcam.utils import overlay_mask
+from torchvision.transforms.functional import to_pil_image
+import matplotlib.pyplot as plt
 
 from pytorch_lightning import seed_everything
 from pathlib import Path
 from simclr import SimCLR
-
 
 # Load trained encoder
 CHECKPOINT_PATH = 'lightning_logs/version_1/checkpoints'
@@ -51,11 +54,12 @@ classifier = nn.Sequential(
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(classifier[1].parameters(), lr=1e-3)
 
+# TensorBoard
+writer = SummaryWriter(log_dir="logs/simclr_linear_eval")
+
 # Training loop
 epochs = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
-writer = SummaryWriter(log_dir="logs/simclr_linear_eval")
-
 for epoch in range(epochs):
     classifier.train()
     total_loss, total_correct = 0, 0
@@ -73,7 +77,7 @@ for epoch in range(epochs):
 
     acc = total_correct / len(train_dataset)
     avg_loss = total_loss / len(train_loader)
-    
+
     print(f"Epoch {epoch+1}: Train Loss = {avg_loss:.4f}, Train Accuracy = {acc:.4f}")
     writer.add_scalar("Train/Loss", avg_loss, epoch)
     writer.add_scalar("Train/Accuracy", acc, epoch)
@@ -91,7 +95,6 @@ print(f"\nFinal Test Accuracy (Natural): {test_acc:.4f}")
 writer.add_scalar("Test/Natural_Accuracy", test_acc, epochs)
 
 # Final test accuracy on stylized images
-# Final stylized test accuracy
 classifier.eval()
 correct_stylized = 0
 with torch.no_grad():
@@ -103,3 +106,24 @@ with torch.no_grad():
 stylized_acc = correct_stylized / len(stylized_dataset)
 print(f"\n Final Stylized Test Accuracy: {stylized_acc:.4f}")
 writer.add_scalar("Test/Accuracy_Stylized", stylized_acc, epochs)
+
+# Grad-CAM visualization on a few natural images
+cam_extractor = GradCAM(classifier[0], target_layer="layer4")
+
+sample_imgs, sample_labels = next(iter(test_loader))
+sample_imgs = sample_imgs.to(device)
+sample_outputs = classifier(sample_imgs)
+sample_preds = sample_outputs.argmax(dim=1)
+
+for i in range(3):
+    img = sample_imgs[i]
+    pred = sample_preds[i].item()
+    cam_map = cam_extractor(pred, sample_outputs[i].unsqueeze(0))
+    heatmap = overlay_mask(to_pil_image(img.cpu()), to_pil_image(cam_map[0].cpu(), mode='F'), alpha=0.5)
+    plt.figure()
+    plt.title(f"Natural Image - Predicted Class: {pred}")
+    plt.imshow(heatmap)
+    plt.axis('off')
+    plt.show()
+
+writer.close()
