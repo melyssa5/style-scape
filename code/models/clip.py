@@ -77,7 +77,7 @@ def main():
 
     train_data = ImageFolder(f"{data_dir}/train", transform=tf)
     natural_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
-    stylized_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
+    stylized_test_data = ImageFolder(f"{data_dir}/stylized", transform=tf)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True,
                               collate_fn=lambda batch: collate_fn(batch, processor))
@@ -86,18 +86,18 @@ def main():
     stylized_test_loader = DataLoader(stylized_test_data, batch_size=batch_size,
                              collate_fn=lambda batch: collate_fn(batch, processor))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    loss_fn = nn.CrossEntropyLoss()
-    best_loss = float('inf')
-    for epoch in range(num_epochs):
-        loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
-        print(f"Epoch {epoch+1} | Loss: {loss:.4f}")
-        if loss < best_loss:
-            torch.save(model.state_dict(), "best_clip.pth")
-            best_loss = loss
-            print(f"New best model saved (Loss: {best_loss:.4f})")
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    # loss_fn = nn.CrossEntropyLoss()
+    # best_loss = float('inf')
+    # for epoch in range(num_epochs):
+    #     loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
+    #     print(f"Epoch {epoch+1} | Loss: {loss:.4f}")
+    #     if loss < best_loss:
+    #         torch.save(model.state_dict(), "best_clip.pth")
+    #         best_loss = loss
+    #         print(f"New best model saved (Loss: {best_loss:.4f})")
 
-
+    model.load_state_dict(torch.load("best_clip.pth"))
     acc, report, cm = evaluate(model, natural_test_loader, device)
     print(f"\nNatural Test Accuracy: {acc:.2%}")
     print(report)
