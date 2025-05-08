@@ -91,14 +91,15 @@ print(f"\nFinal Test Accuracy (Natural): {test_acc:.4f}")
 writer.add_scalar("Test/Natural_Accuracy", test_acc, epochs)
 
 # Final test accuracy on stylized images
+# Final stylized test accuracy
+classifier.eval()
 correct_stylized = 0
 with torch.no_grad():
     for imgs, labels in stylized_loader:
         imgs, labels = imgs.to(device), labels.to(device)
         outputs = classifier(imgs)
         correct_stylized += (outputs.argmax(1) == labels).sum().item()
-stylized_acc = correct_stylized / len(stylized_dataset)
-print(f"Final Test Accuracy (Stylized): {stylized_acc:.4f}")
-writer.add_scalar("Test/Stylized_Accuracy", stylized_acc, epochs)
 
-writer.close()
+stylized_acc = correct_stylized / len(stylized_dataset)
+print(f"\n Final Stylized Test Accuracy: {stylized_acc:.4f}")
+writer.add_scalar("Test/Accuracy_Stylized", stylized_acc, epochs)
