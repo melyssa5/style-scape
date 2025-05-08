@@ -75,7 +75,7 @@ def main():
     tf = model.transform
     processor = model.processor
 
-    train_data = ImageFolder(f"{data_dir}/train", transform=tf)
+    train_data = ImageFolder(f"{data_dir}/train", transform=tf, shuffle=True)
     natural_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
     stylized_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
 
