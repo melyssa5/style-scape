@@ -93,7 +93,7 @@ def main():
         loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
         print(f"Epoch {epoch+1} | Loss: {loss:.4f}")
         if loss < best_loss:
-            torch.save(model.state_dict(), "best_alexnet.pth")
+            torch.save(model.state_dict(), "best_clip.pth")
             best_loss = loss
             print(f"New best model saved (Loss: {best_loss:.4f})")
 
