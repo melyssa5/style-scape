@@ -128,9 +128,12 @@ sample_imgs, sample_labels = next(iter(stylized_loader))
 sample_imgs = sample_imgs.to(device)
 
 # Get predictions and activation maps
-classifier.eval()
-sample_outputs = classifier(sample_imgs)
-pred_classes = sample_outputs.argmax(1)
+# Enable gradients for encoder
+for param in classifier[0].parameters():
+    param.requires_grad = True
+
+classifier.train()  # Important: CAM needs model in train mode (no torch.no_grad)
+
 
 for i in range(min(5, len(sample_imgs))):  # Visualize 5 samples max
     img = sample_imgs[i].unsqueeze(0)
