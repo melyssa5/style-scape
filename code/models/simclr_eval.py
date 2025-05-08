@@ -116,31 +116,41 @@ os.makedirs("gradcam_outputs", exist_ok=True)
 
 print("\nGenerating Grad-CAM visualizations...")
 
-# Enable gradients
-for param in classifier.parameters():
-    param.requires_grad = True
 
-# Attach Grad-CAM to final layer of encoder
-cam_extractor = GradCAM(classifier[0], target_layer="layer4")
 
+# Grad-CAM setup
+cam_extractor = GradCAM(classifier, target_layer="0.layer4")
+output_dir = "gradcam_outputs"
+os.makedirs(output_dir, exist_ok=True)
+
+# Pick a few stylized samples to visualize
 sample_imgs, sample_labels = next(iter(stylized_loader))
-sample_imgs = sample_imgs[:4].to(device)
+sample_imgs = sample_imgs.to(device)
 
-# Forward pass
+# Get predictions and activation maps
+classifier.eval()
 sample_outputs = classifier(sample_imgs)
-pred_classes = sample_outputs.argmax(dim=1)
+pred_classes = sample_outputs.argmax(1)
 
-for i in range(4):
-    # Compute CAM for predicted class
-    activation_map = cam_extractor(pred_classes[i].item(), sample_outputs[i].unsqueeze(0))
+for i in range(min(5, len(sample_imgs))):  # Visualize 5 samples max
+    img = sample_imgs[i].unsqueeze(0)
+    output = classifier(img)
+    class_idx = output.argmax(dim=1).item()
 
-    # Convert original image to PIL
+    # Get Grad-CAM activation
+    activation_map = cam_extractor(class_idx, output)
+
+    # Prepare original image
     original_img = to_pil_image(sample_imgs[i].cpu())
 
-    # Overlay heatmap
-    result = overlay_mask(original_img, to_pil_image(activation_map[0].cpu(), mode='F'), alpha=0.5)
+    # Normalize activation map to [0,1]
+    act = activation_map[0].squeeze(0).cpu()
+    act = (act - act.min()) / (act.max() - act.min() + 1e-5)
 
-    # Save image
-    result.save(f"gradcam_outputs/sample_{i}_class_{pred_classes[i].item()}.png")
+    # Overlay Grad-CAM heatmap
+    result = overlay_mask(original_img, to_pil_image(act, mode='F'), alpha=0.5)
 
-print("Saved Grad-CAM images to gradcam_outputs/")
+    # Save the visualization
+    result.save(f"{output_dir}/sample_{i}_class_{class_idx}.png")
+    print(f"Saved: sample_{i}_class_{class_idx}.png")
+
