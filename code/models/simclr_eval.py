@@ -13,7 +13,7 @@ from simclr import SimCLR
 
 
 # Load trained encoder
-CHECKPOINT_PATH = 'lightning_logs/version_2/checkpoints'
+CHECKPOINT_PATH = 'lightning_logs/version_1/checkpoints'
 ckpt_file = [f for f in Path(CHECKPOINT_PATH).rglob('*.ckpt')][0]
 simclr_model = SimCLR.load_from_checkpoint(str(ckpt_file), strict=False)
 encoder = simclr_model.encoder
