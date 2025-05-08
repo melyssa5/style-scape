@@ -124,7 +124,7 @@ output_dir = "gradcam_outputs"
 os.makedirs(output_dir, exist_ok=True)
 
 # Pick a few stylized samples to visualize
-sample_imgs, sample_labels = next(iter(stylized_loader))
+sample_imgs, sample_labels = next(iter(test_loader))
 sample_imgs = sample_imgs.to(device)
 
 # Get predictions and activation maps
