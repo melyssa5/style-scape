@@ -148,81 +148,66 @@ from PIL import Image
 import random
 
 
-def run_lime_on_samples_dino(model, dataloader, device, output_dir="lime_outputs", num_samples=2):
-    """
-    Automatically runs LIME on selected correct and incorrect samples using a DINOv2 model.
-    Saves visualizations in output_dir.
-    """
-    model.eval()
+# ========= LIME Samples ===============
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from lime import lime_image
+from PIL import Image
+from skimage.segmentation import mark_boundaries
+
+
+def run_lime_on_image_file(model, image_path, device, output_dir="lime_from_file"):
+
+
     os.makedirs(output_dir, exist_ok=True)
+    model.eval()
 
-    correct_imgs, incorrect_imgs = [], []
+    # Load and preprocess image
+    pil_img = Image.open(image_path).convert("RGB")
+    img_np = np.array(pil_img)
 
-    # Collect predictions
-    for x, y in dataloader:
-        x, y = x.to(device), y.to(device)
-        with torch.no_grad():
-            preds = model(x).argmax(dim=1)
-
-        for i in range(len(preds)):
-            image_tensor = x[i].cpu()
-            label = y[i].item()
-            pred = preds[i].item()
-
-            # Reverse normalization for visualization
-            img_np = image_tensor.permute(1, 2, 0).numpy()
-            img_np = (img_np - img_np.min()) / (img_np.max() - img_np.min())  # Normalize to [0,1]
-            img_uint8 = (img_np * 255).astype(np.uint8)
-
-            entry = (img_uint8, label, pred)
-            if label == pred:
-                correct_imgs.append(entry)
-            else:
-                incorrect_imgs.append(entry)
-
-    # Sample
-    random.seed(42)
-    selected_correct = random.sample(correct_imgs, min(num_samples, len(correct_imgs)))
-    selected_incorrect = random.sample(incorrect_imgs, min(num_samples, len(incorrect_imgs)))
-    all_selected = [("correct", img) for img in selected_correct] + [("incorrect", img) for img in selected_incorrect]
-
-    # LIME explainer
     explainer = lime_image.LimeImageExplainer()
 
     def lime_predict(images_np):
-        images_pil = [Image.fromarray(img).convert("RGB") for img in images_np]
-        inputs = model.processor(images=images_pil, return_tensors="pt", do_rescale=False).to(device)
+        pil_batch = [Image.fromarray(img).convert("RGB") for img in images_np]
+        inputs = model.processor(images=pil_batch, return_tensors="pt", do_rescale=False).to(device)
         with torch.no_grad():
             logits = model(inputs["pixel_values"])
             probs = torch.nn.functional.softmax(logits, dim=1)
         return probs.cpu().numpy()
 
     # Run LIME
-    for tag, (img_np, label, pred) in all_selected:
-        explanation = explainer.explain_instance(
-            img_np,
-            lime_predict,
-            labels=[pred],
-            hide_color=0,
-            num_samples=1000
-        )
+    explanation = explainer.explain_instance(
+        img_np,
+        lime_predict,
+        top_labels=3,
+        hide_color=0,
+        num_samples=1000
+    )
 
-        temp, mask = explanation.get_image_and_mask(
-            label=pred,
-            positive_only=True,
-            num_features=5,
-            hide_rest=False
-        )
+    pred = model(processor(images=[pil_img], return_tensors="pt", do_rescale=False)["pixel_values"].to(device)).argmax(dim=1).item()
+    label_to_use = pred if pred in explanation.local_exp else explanation.available_labels()[0]
 
-        # Save
-        fig, ax = plt.subplots()
-        ax.imshow(mark_boundaries(temp, mask))
-        ax.axis('off')
-        ax.set_title(f"{tag} | pred: {pred} | label: {label}")
-        fname = f"{output_dir}/lime_{tag}_pred{pred}_label{label}.png"
-        plt.savefig(fname)
-        plt.close()
-        print(f"Saved: {fname}")
+    temp, mask = explanation.get_image_and_mask(
+        label=label_to_use,
+        positive_only=True,
+        num_features=5,
+        hide_rest=False
+    )
+
+    lime_viz = mark_boundaries(temp, mask)
+
+    # Save output
+    fname = os.path.join(output_dir, f"lime_{os.path.basename(image_path)}")
+    plt.imshow(lime_viz)
+    plt.axis("off")
+    plt.title(f"pred: {pred} | label used: {label_to_use}")
+    plt.savefig(fname)
+    plt.close()
+
+    print(f"✅ LIME saved: {fname}")
+
 
 # ========= GradCAM Utils ===========
 import cv2
