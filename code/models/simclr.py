@@ -36,7 +36,7 @@ class ExpandedStylizedPairDataset(Dataset):
         return self.total_pairs
 
 
-def get_dataloaders(natural_path='style-scape/data/train', stylized_path='style-scape/data/stylized', batch_size=64):
+def get_dataloaders(natural_path='/content/style-scape/data/train"', stylized_path='/content/style-scape/data/stylized', batch_size=64):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
