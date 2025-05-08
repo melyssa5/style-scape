@@ -147,9 +147,10 @@ import os
 from PIL import Image
 import random
 
-def run_lime_on_samples(model, dataloader, processor, device, output_dir="lime_outputs", num_samples=2):
+
+def run_lime_on_samples_dino(model, dataloader, device, output_dir="lime_outputs", num_samples=2):
     """
-    Automatically runs LIME on selected correct and incorrect samples from the dataset.
+    Automatically runs LIME on selected correct and incorrect samples using a DINOv2 model.
     Saves visualizations in output_dir.
     """
     model.eval()
@@ -157,51 +158,53 @@ def run_lime_on_samples(model, dataloader, processor, device, output_dir="lime_o
 
     correct_imgs, incorrect_imgs = [], []
 
-    # First pass: collect predictions
+    # Collect predictions
     for x, y in dataloader:
         x, y = x.to(device), y.to(device)
         with torch.no_grad():
             preds = model(x).argmax(dim=1)
-        
+
         for i in range(len(preds)):
             image_tensor = x[i].cpu()
             label = y[i].item()
             pred = preds[i].item()
 
-            # Convert tensor back to image (undo processor)
-            image_np = (image_tensor.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-            
-            entry = (image_np, label, pred)
+            # Reverse normalization for visualization
+            img_np = image_tensor.permute(1, 2, 0).numpy()
+            img_np = (img_np - img_np.min()) / (img_np.max() - img_np.min())  # Normalize to [0,1]
+            img_uint8 = (img_np * 255).astype(np.uint8)
+
+            entry = (img_uint8, label, pred)
             if label == pred:
                 correct_imgs.append(entry)
             else:
                 incorrect_imgs.append(entry)
 
-    # Select random samples
+    # Sample
     random.seed(42)
     selected_correct = random.sample(correct_imgs, min(num_samples, len(correct_imgs)))
     selected_incorrect = random.sample(incorrect_imgs, min(num_samples, len(incorrect_imgs)))
-
     all_selected = [("correct", img) for img in selected_correct] + [("incorrect", img) for img in selected_incorrect]
 
     # LIME explainer
     explainer = lime_image.LimeImageExplainer()
 
     def lime_predict(images_np):
-        inputs = processor(images=[Image.fromarray(img).convert("RGB") for img in images_np], return_tensors="pt").to(device)
+        images_pil = [Image.fromarray(img).convert("RGB") for img in images_np]
+        inputs = model.processor(images=images_pil, return_tensors="pt", do_rescale=False).to(device)
         with torch.no_grad():
             logits = model(inputs["pixel_values"])
             probs = torch.nn.functional.softmax(logits, dim=1)
         return probs.cpu().numpy()
 
-    # Run LIME on each image
+    # Run LIME
     for tag, (img_np, label, pred) in all_selected:
         explanation = explainer.explain_instance(
-        img_np,
-        lime_predict,
-        labels=[pred],  # explicitly request explanation for pred
-        hide_color=0,
-        num_samples=1000
+            img_np,
+            lime_predict,
+            labels=[pred],
+            hide_color=0,
+            num_samples=1000
         )
 
         temp, mask = explanation.get_image_and_mask(
@@ -211,8 +214,7 @@ def run_lime_on_samples(model, dataloader, processor, device, output_dir="lime_o
             hide_rest=False
         )
 
-
-        # Save visualization
+        # Save
         fig, ax = plt.subplots()
         ax.imshow(mark_boundaries(temp, mask))
         ax.axis('off')
@@ -304,5 +306,5 @@ if __name__ == "__main__":
     evaluate_model(model, stylized_loader, device)
     print("\nEvaluating on Natural Test Dataset:")
     evaluate_model(model, natural_test_loader, device)
-    run_lime_on_samples(model, stylized_loader, processor, device)
-    run_gradcam_on_samples(model, stylized_loader, processor, device)
+    run_lime_on_samples_dino(model, stylized_loader, processor, device)
+    #run_gradcam_on_samples(model, stylized_loader, processor, device)
