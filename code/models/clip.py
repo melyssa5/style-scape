@@ -64,6 +64,66 @@ def evaluate(model, loader, device):
     cm = pd.DataFrame(confusion_matrix(all_targets, all_preds))
     return acc, report, cm
 
+def run_lime_on_clip_image_file(model, image_path, processor, device, output_dir="lime_clip_outputs"):
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from lime import lime_image
+    from PIL import Image
+    from skimage.segmentation import mark_boundaries
+
+    model.eval()
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Load and convert image
+    pil_img = Image.open(image_path).convert("RGB")
+    img_np = np.array(pil_img)
+
+    explainer = lime_image.LimeImageExplainer()
+
+    def lime_predict(images_np):
+        pil_batch = [Image.fromarray(img).convert("RGB") for img in images_np]
+        inputs = processor(images=pil_batch, return_tensors="pt", do_rescale=False)
+        pixel_values = inputs["pixel_values"].to(device)
+        with torch.no_grad():
+            logits = model(pixel_values)
+            probs = torch.nn.functional.softmax(logits, dim=1)
+        return probs.cpu().numpy()
+
+    # Run LIME
+    explanation = explainer.explain_instance(
+        img_np,
+        lime_predict,
+        top_labels=3,
+        hide_color=0,
+        num_samples=1000
+    )
+
+    # Predict original
+    pixel_values = processor(images=[pil_img], return_tensors="pt", do_rescale=False)["pixel_values"].to(device)
+    pred = model(pixel_values).argmax(dim=1).item()
+    label_to_use = pred if pred in explanation.local_exp else explanation.available_labels()[0]
+
+    # Get explanation mask
+    temp, mask = explanation.get_image_and_mask(
+        label=label_to_use,
+        positive_only=True,
+        num_features=5,
+        hide_rest=False
+    )
+
+    # Overlay explanation
+    lime_viz = mark_boundaries(temp, mask)
+    fname = os.path.join(output_dir, f"lime_{os.path.basename(image_path)}")
+    plt.imshow(lime_viz)
+    plt.axis("off")
+    plt.title(f"pred: {pred} | label used: {label_to_use}")
+    plt.savefig(fname)
+    plt.close()
+
+    print(f"✅ LIME saved: {fname}")
+
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     data_dir = "../../data"
