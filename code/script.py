@@ -299,7 +299,7 @@ if __name__ == "__main__":
     config = Config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = DinoV2(config).to(device)
-    model.load_state_dict(torch.load("dinov2_last_model.pth"))
+    model.load_state_dict(torch.load("dinov2_last_model.pth"), weights_only=False)
     _, stylized_loader, natural_test_loader = get_dataloaders(config)
     processor = AutoImageProcessor.from_pretrained(config.model_name)
     print("\nEvaluating on Stylized Dataset:")
