@@ -75,11 +75,11 @@ def main():
     tf = model.transform
     processor = model.processor
 
-    train_data = ImageFolder(f"{data_dir}/train", transform=tf, shuffle=True)
+    train_data = ImageFolder(f"{data_dir}/train", transform=tf)
     natural_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
     stylized_test_data = ImageFolder(f"{data_dir}/test", transform=tf)
 
-    train_loader = DataLoader(train_data, batch_size=batch_size,
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True,
                               collate_fn=lambda batch: collate_fn(batch, processor))
     natural_test_loader = DataLoader(natural_test_data, batch_size=batch_size,
                              collate_fn=lambda batch: collate_fn(batch, processor))
