@@ -45,8 +45,8 @@ def visualize_gradcam(model, processor, data_loader, device, save_dir="clip_grad
     os.makedirs(save_dir, exist_ok=True)
 
     cam_extractor = GradCAM(
-        model=model,
-        target_layer="model.vision_model.encoder.layers.11.layer_norm"
+    model=model,
+    target_layer=model.model.vision_model.embeddings.patch_embedding
     )
 
     model.eval()
@@ -62,25 +62,29 @@ def visualize_gradcam(model, processor, data_loader, device, save_dir="clip_grad
 
             # Get Grad-CAM
             activation_map = cam_extractor(class_idx, output)[0]
-            act = activation_map.squeeze().cpu()
+            act = activation_map.squeeze().detach().cpu()
+            # If it's still not 2D, reshape or assert here
+            if act.ndim != 2:
+                raise ValueError(f"Expected 2D activation map, got shape {act.shape}")
             act = (act - act.min()) / (act.max() - act.min() + 1e-5)
+            act = act.to(dtype=torch.float32)
 
             original_img = raw_imgs[i]
-            heatmap = overlay_mask(to_pil_image(original_img), to_pil_image(act, mode='F'), alpha=0.5)
+            heatmap = overlay_mask(original_img, to_pil_image(act, mode='F'), alpha=0.5)
             heatmap.save(os.path.join(save_dir, f"clip_cam_{i}_class_{class_idx}.png"))
         break  # Just visualize one batch
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = CLIPClassifier().to(device)
+    model = CLIPClassifier(freeze_backbone=False).to(device)
     processor = model.processor
     tf = model.transform
 
-    test_dataset = ImageFolder("../../data/test", transform=tf)
+    test_dataset = ImageFolder("../../data/test")
     test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False,
                              collate_fn=lambda batch: collate_fn(batch, processor))
 
-    model.load_state_dict(torch.load("best_alexnet.pth", map_location=device))
+    model.load_state_dict(torch.load("best_clip.pth", map_location=device))
     visualize_gradcam(model, processor, test_loader, device)
 
 if __name__ == "__main__":
