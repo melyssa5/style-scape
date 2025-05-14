@@ -6,6 +6,7 @@ from torchvision import transforms
 from transformers import CLIPModel, CLIPProcessor
 from sklearn.metrics import classification_report, confusion_matrix
 import pandas as pd
+from ..train import train_epoch, evaluate_accuracy
 
 class CLIPClassifier(nn.Module):
     def __init__(self, num_classes=15, freeze_backbone=True):
@@ -38,33 +39,6 @@ def collate_fn(batch, processor):
     pixel_values = processor(images=list(images), return_tensors="pt", do_rescale=False)["pixel_values"]
     return pixel_values, torch.tensor(labels)
 
-def train_one_epoch(model, loader, optimizer, loss_fn, device):
-    model.train()
-    total_loss = 0
-    for x, y in loader:
-        x, y = x.to(device), y.to(device)
-        out = model(x)
-        loss = loss_fn(out, y)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-    return total_loss / len(loader)
-
-def evaluate(model, loader, device):
-    model.eval()
-    all_preds, all_targets = [], []
-    with torch.no_grad():
-        for x, y in loader:
-            x, y = x.to(device), y.to(device)
-            preds = model(x).argmax(dim=1)
-            all_preds.extend(preds.cpu().numpy())
-            all_targets.extend(y.cpu().numpy())
-
-    acc = sum([p == t for p, t in zip(all_preds, all_targets)]) / len(all_targets)
-    report = classification_report(all_targets, all_preds)
-    cm = pd.DataFrame(confusion_matrix(all_targets, all_preds))
-    return acc, report, cm
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,7 +66,7 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
     best_loss = float('inf')
     for epoch in range(num_epochs):
-        loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
+        loss = train_epoch(model, train_loader, optimizer, loss_fn, device)
         print(f"Epoch {epoch+1} | Loss: {loss:.4f}")
         if loss < best_loss:
             torch.save(model.state_dict(), "best_alexnet.pth")
@@ -100,12 +74,10 @@ def main():
             print(f"New best model saved (Loss: {best_loss:.4f})")
 
 
-    acc, report, cm = evaluate(model, natural_test_loader, device)
-    print(f"\nNatural Test Accuracy: {acc:.2%}")
-    acc, report, cm = evaluate(model, stylized_test_loader, device)
-    print(f"\nStylized Test Accuracy: {acc:.2%}")
-    print(report)
-    print(cm)
+    accuracy = evaluate_accuracy(model, natural_test_loader, device)
+    print(f"\nNatural Test Accuracy: {accuracy:.2%}")
+    accuracy = evaluate_accuracy(model, stylized_test_loader, device)
+    print(f"\nStylized Test Accuracy: {accuracy:.2%}")
 
 if __name__ == "__main__":
     main()

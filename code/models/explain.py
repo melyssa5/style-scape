@@ -7,12 +7,12 @@ from torchvision import transforms
 from lime import lime_image
 from skimage.segmentation import mark_boundaries
 
-# === Shared Normalization Transform ===
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
 
 def get_default_transform(size=224):
     """Returns a default preprocessing transform for input images."""
+
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
     return transforms.Compose([
         transforms.Resize((size, size)),
         transforms.ToTensor(),
@@ -113,7 +113,7 @@ def run_gradcam_interpreter_torch(model, image_np, class_names, device,
     path = os.path.join(save_dir, name)
 
     plt.imsave(path, overlay)
-    print(f"✅ Saved Grad-CAM to {path}")
+    print(f"Saved Grad-CAM to {path}")
 
     h1.remove()
     h2.remove()

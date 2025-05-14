@@ -4,15 +4,12 @@ import torch.nn.functional as F
 import torchvision.models as models
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-from PIL import Image
-import numpy as np
-import os
-import random
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from lime import lime_image
-from skimage.segmentation import mark_boundaries
+from ..train import train_epoch, evaluate_accuracy
+
+# Sources Used
+# https://github.com/dansuh17/alexnet-pytorch 
+# https://pytorch.org/vision/main/models/generated/torchvision.models.alexnet.html 
+
 
 # MODEL PARAMETERS
 NUM_EPOCHS = 90
@@ -51,36 +48,6 @@ class AlexNet(nn.Module):
 
 
 
-def train(model, train_loader, optimizer, criterion, device):
-    model.train()
-    train_loss = 0.0
-    for images, labels in tqdm(train_loader, desc="Training"):
-        images, labels = images.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.item()
-
-    return train_loss / len(train_loader)
-
-
-def test(model, test_loader, device):
-    model.eval()
-    correct = total = 0
-    with torch.no_grad():
-        for images, labels in tqdm(test_loader, desc="Testing"):
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
-    return correct / total
-
-
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch_size = 32
@@ -101,7 +68,7 @@ def main():
 
     best_loss = float('inf')
     for epoch in range(epochs):
-        train_loss = train(model, train_loader, optimizer, criterion, device)
+        train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.4f}")
 
         if train_loss < best_loss:
@@ -111,20 +78,13 @@ def main():
 
     print("\nTraining complete. Starting testing...")
     model.load_state_dict(torch.load("best_alexnet.pth"))
-    natural_test_acc = test(model, natural_test_loader, device)
+    natural_test_acc = evaluate_accuracy(model, natural_test_loader, device)
     print(f"\nFinal Natural Test Accuracy: {100*natural_test_acc:.2f}%")
-    stylized_test_acc = test(model, stylized_test_loader, device)
+    stylized_test_acc = evaluate_accuracy(model, stylized_test_loader, device)
     print(f"\nFinal Stylized Test Accuracy: {100*stylized_test_acc:.2f}%")
-
-
-
-
 
 
 if __name__ == "__main__":
     main()
 
 
-# Sources Used
-# https://github.com/dansuh17/alexnet-pytorch 
-# https://pytorch.org/vision/main/models/generated/torchvision.models.alexnet.html 
