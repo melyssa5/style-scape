@@ -72,9 +72,6 @@ def evaluate_epoch(model, test_loader, device='cuda', print_results=True):
         print("="*50)
         print("\nCLASSIFICATION REPORT:")
         print(results['report'])
-        
-        print("\nCONFUSION MATRIX (Top 5 Classes):")
-        print(results['confusion_matrix'].iloc[:5, :5])
         print(f"\nOVERALL ACCURACY: {results['accuracy']:.2%}")
         print("="*50)
     
