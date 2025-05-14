@@ -1,4 +1,5 @@
 """
+Code Used From
 Homework 5 - CNNs
 CSCI1430 - Computer Vision
 Brown University
@@ -11,7 +12,6 @@ import sklearn.metrics
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
-import hyperparameters as hp
 
 
 def plot_to_image(figure):
