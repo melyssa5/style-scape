@@ -1,10 +1,25 @@
 # Train a model
 import argparse
-
 import torch
 from models.alexnet import AlexNet
 from models.dinoV2 import DinoV2
-from utils.train import train_one_epoch, evaluate_epoch
+from train import train_epoch, evaluate
+
+def train_loop(model, train_loader, test_loader, optimizer, loss_fn, device, epochs=50, save_path="best_model.pth"):
+    best_loss = float('inf')
+
+    for epoch in range(epochs):
+        train_loss = train_epoch(model, train_loader, optimizer, loss_fn, device)
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.4f}")
+
+        if train_loss < best_loss:
+            torch.save(model.state_dict(), save_path)
+            best_loss = train_loss
+            print(f"New best model saved to {save_path} (Loss: {best_loss:.4f})")
+
+        if test_loader:
+            acc = evaluate(model, test_loader, device)
+            print(f"Test Accuracy: {acc:.2%}")
 
 
 def parse_args():
@@ -39,12 +54,5 @@ def main():
     #
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     loss_fn = torch.nn.CrossEntropyLoss()
-    #for epoch in range(epochs):
-        #     loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
-        #     print(f"[{model_name}] Epoch {epoch+1}/{epochs} | Train Loss: {loss:.4f}")
 
-        # acc, report, cm = evaluate_epoch(model, test_loader, device)
-        # print(f"\nFinal Test Accuracy: {acc:.2%}")
-        # print(report)
-        # print(cm)
 
